@@ -16,11 +16,19 @@ import (
 	"time"
 )
 
-// dungeon rooms
-var roomAttempts = 200
-var minRoomSize = 5
-var maxRoomSize = 15
-var pixelSize = 4
+// DungeonConfig is the main params that are being set for the dungeon config
+type DungeonConfig struct {
+	width  int
+	height int
+}
+
+// DungeonRoomsConfig is the params set for dungeon room configuration
+type DungeonRoomsConfig struct {
+	roomAttempts int
+	minRoomSize  int
+	maxRoomSize  int
+	pixelSize    int
+}
 
 type Material int
 
@@ -58,7 +66,9 @@ type Dungeon struct {
 
 func createEmptyDungeon(width int, height int) Dungeon {
 	fmt.Println("Creating empty dungeon...")
+
 	dungeon := Dungeon{width: width, height: height}
+
 	dungeon.tiles = make([][]Tile, height)
 
 	for i := range dungeon.tiles {
@@ -70,6 +80,7 @@ func createEmptyDungeon(width int, height int) Dungeon {
 
 func createRooms(dungeon Dungeon, minSize, maxSize, attempts int) Dungeon {
 	fmt.Println("Creating rooms...")
+
 	var rooms []Room
 
 	for i := 0; i < attempts; i++ {
@@ -83,6 +94,7 @@ func createRooms(dungeon Dungeon, minSize, maxSize, attempts int) Dungeon {
 		y := rand.Intn(maxY-3) + 3
 
 		shouldAppend := true
+
 		for r := range rooms {
 			if x+width < rooms[r].location.x || // to the left
 				x > rooms[r].location.x+rooms[r].width || // to the right
@@ -102,6 +114,7 @@ func createRooms(dungeon Dungeon, minSize, maxSize, attempts int) Dungeon {
 
 	for r := range rooms {
 		dungeon.numRegions++
+
 		for i := rooms[r].location.x; i < rooms[r].location.x+rooms[r].width; i++ {
 			for j := rooms[r].location.y; j < rooms[r].location.y+rooms[r].height; j++ {
 				dungeon.tiles[j][i].material = FLOOR
@@ -111,11 +124,13 @@ func createRooms(dungeon Dungeon, minSize, maxSize, attempts int) Dungeon {
 	}
 
 	dungeon.rooms = rooms
+
 	return dungeon
 }
 
 func createMaze(dungeon Dungeon) Dungeon {
 	fmt.Println("Creating tunnels...")
+
 	for x := 1; x < dungeon.width-1; x++ {
 		for y := 1; y < dungeon.height-1; y++ {
 			if dungeon.tiles[y-1][x-1].material == WALL &&
@@ -127,7 +142,6 @@ func createMaze(dungeon Dungeon) Dungeon {
 				dungeon.tiles[y-1][x+1].material == WALL &&
 				dungeon.tiles[y][x+1].material == WALL &&
 				dungeon.tiles[y+1][x+1].material == WALL {
-
 				dungeon.numRegions++
 				continueMaze(dungeon, x, y)
 			}
@@ -147,37 +161,36 @@ func continueMaze(dungeon Dungeon, x int, y int) {
 			dungeon.tiles[y-1][x-2].material == WALL &&
 			dungeon.tiles[y+1][x-1].material == WALL &&
 			dungeon.tiles[y-1][x-1].material == WALL {
-
 			validTiles = append(validTiles, Point{y: y, x: x - 1})
 		}
 	}
+
 	if x+2 < dungeon.width && dungeon.tiles[y][x+1].material == WALL {
 		if dungeon.tiles[y][x+2].material == WALL &&
 			dungeon.tiles[y-1][x+2].material == WALL &&
 			dungeon.tiles[y+1][x+2].material == WALL &&
 			dungeon.tiles[y+1][x+1].material == WALL &&
 			dungeon.tiles[y-1][x+1].material == WALL {
-
 			validTiles = append(validTiles, Point{y: y, x: x + 1})
 		}
 	}
+
 	if y-2 >= 0 && dungeon.tiles[y-1][x].material == WALL {
 		if dungeon.tiles[y-2][x].material == WALL &&
 			dungeon.tiles[y-2][x-1].material == WALL &&
 			dungeon.tiles[y-2][x+1].material == WALL &&
 			dungeon.tiles[y-1][x-1].material == WALL &&
 			dungeon.tiles[y-1][x+1].material == WALL {
-
 			validTiles = append(validTiles, Point{y: y - 1, x: x})
 		}
 	}
+
 	if y+2 < dungeon.height && dungeon.tiles[y+1][x].material == WALL {
 		if dungeon.tiles[y+2][x].material == WALL &&
 			dungeon.tiles[y+2][x-1].material == WALL &&
 			dungeon.tiles[y+2][x+1].material == WALL &&
 			dungeon.tiles[y+1][x-1].material == WALL &&
 			dungeon.tiles[y+1][x+1].material == WALL {
-
 			validTiles = append(validTiles, Point{y: y + 1, x: x})
 		}
 	}
@@ -202,6 +215,7 @@ func continueMaze(dungeon Dungeon, x int, y int) {
 
 func identifyEdges(dungeon Dungeon) Dungeon {
 	fmt.Println("Identifying edges...")
+
 	for i := range dungeon.rooms {
 		x := dungeon.rooms[i].location.x
 		y := dungeon.rooms[i].location.y
@@ -209,12 +223,11 @@ func identifyEdges(dungeon Dungeon) Dungeon {
 		for j := x; j < x+dungeon.rooms[i].width; j++ {
 			if dungeon.tiles[y-2][j].material == TUNNEL ||
 				dungeon.tiles[y-2][j].material == FLOOR {
-
 				dungeon.rooms[i].edges = append(dungeon.rooms[i].edges, Point{x: j, y: y - 1})
 			}
+
 			if dungeon.tiles[y+dungeon.rooms[i].height+1][j].material == TUNNEL ||
 				dungeon.tiles[y+dungeon.rooms[i].height+1][j].material == FLOOR {
-
 				dungeon.rooms[i].edges = append(dungeon.rooms[i].edges, Point{x: j, y: y + dungeon.rooms[i].height})
 			}
 		}
@@ -222,12 +235,11 @@ func identifyEdges(dungeon Dungeon) Dungeon {
 		for k := y; k < y+dungeon.rooms[i].height; k++ {
 			if dungeon.tiles[k][x-2].material == TUNNEL ||
 				dungeon.tiles[k][x-2].material == FLOOR {
-
 				dungeon.rooms[i].edges = append(dungeon.rooms[i].edges, Point{x: x - 1, y: k})
 			}
+
 			if dungeon.tiles[k][x+dungeon.rooms[i].width+1].material == TUNNEL ||
 				dungeon.tiles[k][x+dungeon.rooms[i].width+1].material == FLOOR {
-
 				dungeon.rooms[i].edges = append(dungeon.rooms[i].edges, Point{x: x + dungeon.rooms[i].width, y: k})
 			}
 		}
@@ -238,6 +250,7 @@ func identifyEdges(dungeon Dungeon) Dungeon {
 
 func connectRegions(dungeon Dungeon) Dungeon {
 	fmt.Println("Conneting regions...")
+
 	for i := range dungeon.rooms {
 		room := dungeon.rooms[i]
 		edge := room.edges[rand.Intn(len(dungeon.rooms[i].edges))]
@@ -258,8 +271,8 @@ func connectRegions(dungeon Dungeon) Dungeon {
 		for j := range surroundingTiles {
 			if (surroundingTiles[j].material == FLOOR || surroundingTiles[j].material == TUNNEL) &&
 				surroundingTiles[j].region != roomRegion {
-
 				dungeon.tiles[edge.y][edge.x].material = DOOR
+
 				for x := room.location.x; x < room.location.x+room.width; x++ {
 					for y := room.location.y; y < room.location.y+room.height; y++ {
 						dungeon.tiles[y][x].region = surroundingTiles[j].region
@@ -283,10 +296,10 @@ RoomsLoop:
 			y := edge.y
 
 			surroundingPoints := [4]Point{
-				Point{x: x - 1, y: y},
-				Point{x: x + 1, y: y},
-				Point{x: x, y: y - 1},
-				Point{x: x, y: y + 1},
+				{x: x - 1, y: y},
+				{x: x + 1, y: y},
+				{x: x, y: y - 1},
+				{x: x, y: y + 1},
 			}
 
 			curRegion := -1
@@ -294,10 +307,7 @@ RoomsLoop:
 				tile := dungeon.tiles[surroundingPoints[k].y][surroundingPoints[k].x]
 				if curRegion == -1 && tile.region != 0 {
 					curRegion = tile.region
-				} else if tile.region != curRegion &&
-					tile.region != 0 &&
-					!connectedRegions[tile.region] {
-
+				} else if tile.region != curRegion && tile.region != 0 && !connectedRegions[tile.region] {
 					dungeon.tiles[y][x].material = DOOR
 					connectedRegions[tile.region] = true
 					connectedRegions[curRegion] = true
@@ -305,7 +315,6 @@ RoomsLoop:
 					continue RoomsLoop
 				}
 			}
-
 		}
 	}
 
@@ -314,6 +323,7 @@ RoomsLoop:
 
 func trimTunnels(dungeon Dungeon) {
 	fmt.Println("Trimming tunnels...")
+
 	for x := 1; x < dungeon.width-1; x++ {
 		for y := 1; y < dungeon.height-1; y++ {
 			continueTrimTunnels(dungeon, x, y)
@@ -327,10 +337,10 @@ func continueTrimTunnels(dungeon Dungeon, x int, y int) {
 		nextPoint := Point{}
 
 		surroundingPoints := [4]Point{
-			Point{x: x - 1, y: y},
-			Point{x: x + 1, y: y},
-			Point{x: x, y: y - 1},
-			Point{x: x, y: y + 1},
+			{x: x - 1, y: y},
+			{x: x + 1, y: y},
+			{x: x, y: y - 1},
+			{x: x, y: y + 1},
 		}
 
 		for i := range surroundingPoints {
@@ -345,6 +355,7 @@ func continueTrimTunnels(dungeon Dungeon, x int, y int) {
 		if wallCount >= 3 {
 			dungeon.tiles[y][x].material = WALL
 			dungeon.tiles[y][x].region = 0
+
 			if nextPoint.x != 0 || nextPoint.y != 0 {
 				continueTrimTunnels(dungeon, nextPoint.x, nextPoint.y)
 			}
@@ -360,16 +371,12 @@ func renderDungeon(dungeon Dungeon) {
 			switch dungeon.tiles[y][x].material {
 			case WALL:
 				fmt.Print("0 ")
-				break
 			case FLOOR:
 				fmt.Print("= ")
-				break
 			case DOOR:
 				fmt.Print("| ")
-				break
 			case TUNNEL:
 				fmt.Print("- ")
-				break
 			default:
 				fmt.Print("ER")
 			}
@@ -388,7 +395,7 @@ func generateTileMask(size int) image.Image {
 
 	// background color
 	draw.Draw(
-		mask, // dst image
+		mask,                         // dst image
 		image.Rect(0, 0, size, size), // rectangle
 		mediumUniform,                // src image
 		image.ZP,                     // point
@@ -397,7 +404,7 @@ func generateTileMask(size int) image.Image {
 
 	// lighter lines
 	draw.Draw(
-		mask, // dst image
+		mask,                        // dst image
 		image.Rect(0, 0, size-1, 1), // rectangle
 		lightUniform,                // src image
 		image.ZP,                    // point
@@ -405,7 +412,7 @@ func generateTileMask(size int) image.Image {
 	)
 
 	draw.Draw(
-		mask, // dst image
+		mask,                        // dst image
 		image.Rect(0, 1, 1, size-1), // rectangle
 		lightUniform,                // src image
 		image.ZP,                    // point
@@ -414,7 +421,7 @@ func generateTileMask(size int) image.Image {
 
 	// darker lines
 	draw.Draw(
-		mask, // dst image
+		mask,                                // dst image
 		image.Rect(size-1, 1, size, size-1), // rectangle
 		darkUniform,                         // src image
 		image.ZP,                            // point
@@ -422,7 +429,7 @@ func generateTileMask(size int) image.Image {
 	)
 
 	draw.Draw(
-		mask, // dst image
+		mask,                              // dst image
 		image.Rect(1, size-1, size, size), // rectangle
 		darkUniform,                       // src image
 		image.ZP,                          // point
@@ -432,47 +439,44 @@ func generateTileMask(size int) image.Image {
 	return mask
 }
 
-func dungeonToImage(dungeon Dungeon) image.Image {
-	mask := generateTileMask(pixelSize)
+func dungeonToImage(dungeon Dungeon, drConfig DungeonRoomsConfig) image.Image {
+	mask := generateTileMask(drConfig.pixelSize)
 
-	m := image.NewRGBA(image.Rect(0, 0, dungeon.width*pixelSize, dungeon.height*pixelSize))
+	m := image.NewRGBA(image.Rect(0, 0, dungeon.width*drConfig.pixelSize, dungeon.height*drConfig.pixelSize))
 	draw.Draw(
 		m, // dst image
-		image.Rect(0, 0, dungeon.width*pixelSize, dungeon.height*pixelSize), // rectangle
-		&image.Uniform{color.RGBA{255, 255, 255, 255}},                      // src image
+		image.Rect(0, 0, dungeon.width*drConfig.pixelSize, dungeon.height*drConfig.pixelSize), // rectangle
+		&image.Uniform{color.RGBA{255, 255, 255, 255}},                                        // src image
 		image.ZP,  // point
 		draw.Over, // OP
 	)
 
 	for y := 0; y < dungeon.height; y++ {
 		for x := 0; x < dungeon.width; x++ {
-			pixelColor := color.RGBA{0, 0, 0, 0}
+			var pixelColor color.RGBA
 
 			switch dungeon.tiles[y][x].material {
 			case WALL:
 				pixelColor = color.RGBA{0, 0, 0, 255}
-				break
 			case FLOOR:
 				pixelColor = color.RGBA{128, 128, 128, 255}
-				break
 			case DOOR:
 				pixelColor = color.RGBA{150, 100, 0, 255}
-				break
 			case TUNNEL:
 				pixelColor = color.RGBA{200, 200, 200, 255}
-				break
 			default:
 				pixelColor = color.RGBA{255, 0, 0, 255}
 			}
 
 			draw.DrawMask(
 				m, // dst image
-				image.Rect(x*pixelSize, y*pixelSize, (x+1)*pixelSize, (y+1)*pixelSize), // rectangle
-				&image.Uniform{pixelColor},                                             // src image
-				image.ZP,                                                               // point
-				mask,                                                                   // mask image
-				image.ZP,                                                               // mask point
-				draw.Over,                                                              // OP
+				image.Rect(x*drConfig.pixelSize, y*drConfig.pixelSize,
+					(x+1)*drConfig.pixelSize, (y+1)*drConfig.pixelSize), // rectangle
+				&image.Uniform{pixelColor}, // src image
+				image.ZP,                   // point
+				mask,                       // mask image
+				image.ZP,                   // mask point
+				draw.Over,                  // OP
 			)
 		}
 	}
@@ -480,9 +484,9 @@ func dungeonToImage(dungeon Dungeon) image.Image {
 	return m
 }
 
-func generateDungeon(width int, height int) Dungeon {
-	dungeon := createEmptyDungeon(width, height)
-	dungeon = createRooms(dungeon, minRoomSize, maxRoomSize, roomAttempts)
+func generateDungeon(dConfig DungeonConfig, drConfig DungeonRoomsConfig) Dungeon {
+	dungeon := createEmptyDungeon(dConfig.width, dConfig.height)
+	dungeon = createRooms(dungeon, drConfig.minRoomSize, drConfig.maxRoomSize, drConfig.roomAttempts)
 	dungeon = createMaze(dungeon)
 	dungeon = identifyEdges(dungeon)
 	dungeon = connectRegions(dungeon)
@@ -494,21 +498,37 @@ func generateDungeon(width int, height int) Dungeon {
 func parseIntOption(option []string, defaultValue int, min int, max int) int {
 	if len(option) == 0 {
 		return defaultValue
-	} else {
-		value, err := strconv.Atoi(option[0])
-		if err != nil || value < min || value > max {
-			return defaultValue
-		} else {
-			return value
-		}
 	}
+
+	value, err := strconv.Atoi(option[0])
+
+	if err != nil || value < min || value > max {
+		return defaultValue
+	}
+
+	return value
 }
 
 func main() {
 	serverFlag := flag.Bool("server", false, "Run as a server on port 8080 and serve PNG files")
 	flag.Parse()
+
 	if !*serverFlag {
-		dungeon := generateDungeon(40, 40)
+		dConfig := DungeonConfig{
+			width:  50,
+			height: 50,
+		}
+
+		drConfig := DungeonRoomsConfig{
+			roomAttempts: 200,
+			minRoomSize:  5,
+			maxRoomSize:  15,
+			pixelSize:    10,
+		}
+
+		rand.Seed(time.Now().UTC().UnixNano())
+
+		dungeon := generateDungeon(dConfig, drConfig)
 		renderDungeon(dungeon)
 	} else {
 		fs := http.FileServer(http.Dir(""))
@@ -517,12 +537,16 @@ func main() {
 		http.HandleFunc("/generate/", func(w http.ResponseWriter, r *http.Request) {
 			query, _ := url.ParseQuery(r.URL.RawQuery)
 
-			dungeonWidth := parseIntOption(query["dungeonWidth"], 50, 20, 1000)
-			dungeonHeight := parseIntOption(query["dungeonHeight"], 50, 20, 1000)
-			roomAttempts = parseIntOption(query["roomAttempts"], 200, 1, 100000)
-			minRoomSize = parseIntOption(query["minRoomSize"], 5, 1, int(math.Min(float64(dungeonWidth-2), float64(dungeonHeight-2))))
-			maxRoomSize = parseIntOption(query["maxRoomSize"], minRoomSize+1, minRoomSize, int(math.Min(float64(dungeonWidth-2), float64(dungeonHeight-2))))
-			pixelSize = parseIntOption(query["pixelSize"], 10, 1, 20)
+			dConfig := DungeonConfig{}
+			drConfig := DungeonRoomsConfig{}
+			dConfig.width = parseIntOption(query["dungeonWidth"], 50, 20, 1000)
+			dConfig.height = parseIntOption(query["dungeonHeight"], 50, 20, 1000)
+			maxAllowedRoomSize := int(math.Min(float64(dConfig.width-2), float64(dConfig.height-2)))
+			drConfig.roomAttempts = parseIntOption(query["roomAttempts"], 200, 1, 100000)
+			drConfig.minRoomSize = parseIntOption(query["minRoomSize"], 5, 1, maxAllowedRoomSize)
+			drConfig.maxRoomSize = parseIntOption(query["maxRoomSize"], drConfig.minRoomSize+1,
+				drConfig.minRoomSize, maxAllowedRoomSize)
+			drConfig.pixelSize = parseIntOption(query["pixelSize"], 10, 1, 20)
 
 			if len(query["seed"]) != 0 {
 				seed, err := strconv.ParseInt(query["seed"][0], 10, 64)
@@ -535,25 +559,25 @@ func main() {
 				rand.Seed(time.Now().UTC().UnixNano())
 			}
 
-			dungeon := generateDungeon(dungeonWidth, dungeonHeight)
+			dungeon := generateDungeon(dConfig, drConfig)
 
 			if r.URL.Path == "/generate/json/" {
-				tiles := make([][]int, dungeonHeight)
-				for i := 0; i < dungeonHeight; i++ {
-					tiles[i] = make([]int, dungeonWidth)
-					for j := 0; j < dungeonWidth; j++ {
+				tiles := make([][]int, dConfig.height)
+				for i := 0; i < dConfig.height; i++ {
+					tiles[i] = make([]int, dConfig.width)
+					for j := 0; j < dConfig.width; j++ {
 						tiles[i][j] = int(dungeon.tiles[i][j].material)
 					}
 				}
 
-				dungeonJson, _ := json.Marshal(tiles)
-				fmt.Fprintf(w, string(dungeonJson))
+				dungeonJSON, _ := json.Marshal(tiles)
+				fmt.Fprintf(w, "%s", string(dungeonJSON))
 			} else {
 				w.Header().Set("Content-Type", "image/png")
-				png.Encode(w, dungeonToImage(dungeon))
+				_ = png.Encode(w, dungeonToImage(dungeon, drConfig))
 			}
 		})
 
-		http.ListenAndServe(":8080", nil)
+		_ = http.ListenAndServe(":8080", nil)
 	}
 }
