@@ -151,49 +151,87 @@ func createMaze(dungeon Dungeon) Dungeon {
 	return dungeon
 }
 
-func continueMaze(dungeon Dungeon, x int, y int) {
+func lookDown(dungeon Dungeon, x int, y int) bool {
+	if dungeon.tiles[y][x-2].material == WALL &&
+		dungeon.tiles[y+1][x-2].material == WALL &&
+		dungeon.tiles[y-1][x-2].material == WALL &&
+		dungeon.tiles[y+1][x-1].material == WALL &&
+		dungeon.tiles[y-1][x-1].material == WALL {
+		return true
+	}
+
+	return false
+}
+
+func lookUp(dungeon Dungeon, x int, y int) bool {
+	if dungeon.tiles[y][x+2].material == WALL &&
+		dungeon.tiles[y-1][x+2].material == WALL &&
+		dungeon.tiles[y+1][x+2].material == WALL &&
+		dungeon.tiles[y+1][x+1].material == WALL &&
+		dungeon.tiles[y-1][x+1].material == WALL {
+		return true
+	}
+
+	return false
+}
+
+func lookLeft(dungeon Dungeon, x int, y int) bool {
+	// Check Left
+	if dungeon.tiles[y-2][x].material == WALL &&
+		dungeon.tiles[y-2][x-1].material == WALL &&
+		dungeon.tiles[y-2][x+1].material == WALL &&
+		dungeon.tiles[y-1][x-1].material == WALL &&
+		dungeon.tiles[y-1][x+1].material == WALL {
+		return true
+	}
+
+	return false
+}
+
+func lookRight(dungeon Dungeon, x int, y int) bool {
+	if dungeon.tiles[y+2][x].material == WALL &&
+		dungeon.tiles[y+2][x-1].material == WALL &&
+		dungeon.tiles[y+2][x+1].material == WALL &&
+		dungeon.tiles[y+1][x-1].material == WALL &&
+		dungeon.tiles[y+1][x+1].material == WALL {
+		return true
+	}
+
+	return false
+}
+
+func getValidTiles(dungeon Dungeon, x int, y int) []Point {
 	validTiles := []Point{}
 
 	if x-2 >= 0 && dungeon.tiles[y][x-1].material == WALL {
-		// check if is valid move by checking surroundings
-		if dungeon.tiles[y][x-2].material == WALL &&
-			dungeon.tiles[y+1][x-2].material == WALL &&
-			dungeon.tiles[y-1][x-2].material == WALL &&
-			dungeon.tiles[y+1][x-1].material == WALL &&
-			dungeon.tiles[y-1][x-1].material == WALL {
+		if lookDown(dungeon, x, y) {
 			validTiles = append(validTiles, Point{y: y, x: x - 1})
 		}
 	}
 
 	if x+2 < dungeon.width && dungeon.tiles[y][x+1].material == WALL {
-		if dungeon.tiles[y][x+2].material == WALL &&
-			dungeon.tiles[y-1][x+2].material == WALL &&
-			dungeon.tiles[y+1][x+2].material == WALL &&
-			dungeon.tiles[y+1][x+1].material == WALL &&
-			dungeon.tiles[y-1][x+1].material == WALL {
+		if lookUp(dungeon, x, y) {
 			validTiles = append(validTiles, Point{y: y, x: x + 1})
 		}
 	}
 
 	if y-2 >= 0 && dungeon.tiles[y-1][x].material == WALL {
-		if dungeon.tiles[y-2][x].material == WALL &&
-			dungeon.tiles[y-2][x-1].material == WALL &&
-			dungeon.tiles[y-2][x+1].material == WALL &&
-			dungeon.tiles[y-1][x-1].material == WALL &&
-			dungeon.tiles[y-1][x+1].material == WALL {
+		if lookLeft(dungeon, x, y) {
 			validTiles = append(validTiles, Point{y: y - 1, x: x})
 		}
 	}
 
 	if y+2 < dungeon.height && dungeon.tiles[y+1][x].material == WALL {
-		if dungeon.tiles[y+2][x].material == WALL &&
-			dungeon.tiles[y+2][x-1].material == WALL &&
-			dungeon.tiles[y+2][x+1].material == WALL &&
-			dungeon.tiles[y+1][x-1].material == WALL &&
-			dungeon.tiles[y+1][x+1].material == WALL {
+		if lookRight(dungeon, x, y) {
 			validTiles = append(validTiles, Point{y: y + 1, x: x})
 		}
 	}
+
+	return validTiles
+}
+
+func continueMaze(dungeon Dungeon, x int, y int) {
+	validTiles := getValidTiles(dungeon, x, y)
 
 	if len(validTiles) > 1 {
 		i := rand.Intn(len(validTiles))
